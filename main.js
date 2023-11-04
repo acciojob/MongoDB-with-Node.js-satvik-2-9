@@ -1,34 +1,43 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const MongoClient = require('mongodb').MongoClient;
-const ObjectId = require('mongodb').ObjectId;
+const mongoose = require('mongoose');
+const User = require('./userModel.js');
 
-const app = express();
-const port = process.env.PORT || 3000;
+function startServer(port) {
+  const app = express();
+  app.use(bodyParser.json());
 
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(bodyParser.json());
-
-const url = '<insert your MongoDB connection string here>';
-const dbName = '<insert your database name here>';
-const collectionName = '<insert your collection name here>';
-
-MongoClient.connect(url, { useNewUrlParser: true }, (err, client) => {
-  if (err) return console.log(err);
-
-  const db = client.db(dbName);
-  const collection = db.collection(collectionName);
-
-  app.post('/resetpassword/:id', (req, res) => {
-    const userId = req.params.id;
+  app.post('/resetpassword/:userId', async (req, res) => {
+    const userId = req.params.userId;
     const newPassword = req.body.password;
+    
+    try {
+      const user = await User.findById(userId);
+      if (!user) {
+        return res.status(404).send('User not found');
+      }
 
-    // TODO: Implement password reset functionality here
-
-    res.send('Password reset successful');
+      user.password = newPassword; // Ideally, you should hash the password before saving.
+      await user.save();
+      res.status(200).send('Password updated');
+    } catch (error) {
+      res.status(500).send('An error occurred');
+    }
   });
 
-  app.listen(port, () => {
-    console.log(`Server listening on port ${port}`);
-  });
-});
+  const server = app.listen(port, () => console.log(`Server running on port ${port}`));
+
+  return { app, server };
+}
+
+if (require.main === module) {
+  // Connect to MongoDB
+  mongoose.connect('mongodb://localhost:27017/testDB', { useNewUrlParser: true, useUnifiedTopology: true })
+    .then(() => console.log('Connected to MongoDB!'))
+    .catch(err => console.error('Failed to connect to MongoDB:', err));
+
+  // If this file is run directly, start the server on port 3000
+  startServer(3000);
+}
+
+module.exports = startServer;
