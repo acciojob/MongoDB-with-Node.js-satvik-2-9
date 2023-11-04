@@ -1,0 +1,4 @@
+{
+    "testRepo": "MongoDB-with-Node.js-solution",
+    "pathToFile": "tests/main.test.js"
+}
